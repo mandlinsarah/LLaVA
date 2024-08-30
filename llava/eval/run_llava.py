@@ -31,11 +31,19 @@ def image_parser(args):
 
 
 def load_image(image_file):
-    if image_file.startswith("http") or image_file.startswith("https"):
-        response = requests.get(image_file)
-        image = Image.open(BytesIO(response.content)).convert("RGB")
-    else:
-        image = Image.open(image_file).convert("RGB")
+    try:
+        if image_file.startswith("http") or image_file.startswith("https"):
+            response = requests.get(image_file)
+            response.raise_for_status()  # Ensure we catch HTTP errors
+            image = Image.open(BytesIO(response.content)).convert("RGB")
+        else:
+            image = Image.open(image_file).convert("RGB")
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching image from URL {image_file}: {e}")
+        return None
+    except (FileNotFoundError, IOError) as e:
+        print(f"Error opening image file {image_file}: {e}")
+        return None
     return image
 
 
@@ -43,7 +51,8 @@ def load_images(image_files):
     out = []
     for image_file in image_files:
         image = load_image(image_file)
-        out.append(image)
+        if image is not None:
+            out.append(image)
     return out
 
 
@@ -143,3 +152,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     eval_model(args)
+
